@@ -40,7 +40,7 @@
                 <!-- Image -->
                 <div class="relative">
                     <img
-                        src="/images/lineage.jpg"
+                        src="/images/Lineage.jpeg"
                         alt="Linhagem do Kolo'e Koa Dojo Kenpo"
                         class="w-full h-[500px] object-cover"
                     />
