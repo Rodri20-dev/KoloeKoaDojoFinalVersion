@@ -1,17 +1,7 @@
 <script setup>
-
-import Header from './layouts/Header.vue';
-import Main from './layouts/Main.vue';
-import Footer from './layouts/Footer.vue';
-
+import { RouterView } from "vue-router";
 </script>
 
 <template>
-    <Header/>
-
-    <Main/>
-
-    <Footer />
+    <RouterView />
 </template>
-
-<style scoped></style>

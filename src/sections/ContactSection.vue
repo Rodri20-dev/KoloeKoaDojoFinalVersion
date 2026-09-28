@@ -1,91 +1,111 @@
 <script setup>
 import { ref } from "vue";
+import { supabase } from "../lib/supabase";
 
-const form = ref({
-    name: "",
-    email: "",
-    subject: "",
-    message: "",
-});
+const name = ref("");
+const email = ref("");
+const subject = ref("");
+const message = ref("");
 
-const submitted = ref(false);
+const loading = ref(false);
+const successMessage = ref("");
+const errorMessage = ref("");
 
-const handleSubmit = () => {
-    // Temporary behaviour.
-    // Later this will send the message to the backend,
-    // email service and admin area.
-    submitted.value = true;
+const submitForm = async () => {
+    successMessage.value = "";
+    errorMessage.value = "";
+
+    if (
+        !name.value.trim() ||
+        !email.value.trim() ||
+        !subject.value.trim() ||
+        !message.value.trim()
+    ) {
+        errorMessage.value = "Preenche todos os campos.";
+        return;
+    }
+
+    loading.value = true;
+
+    const { error } = await supabase
+        .from("contact_messages")
+        .insert({
+            name: name.value.trim(),
+            email: email.value.trim(),
+            subject: subject.value.trim(),
+            message: message.value.trim(),
+            status: "new",
+        });
+
+    if (error) {
+        console.error("Contact form error:", error);
+
+        errorMessage.value =
+            "Não foi possível enviar a mensagem. Tenta novamente.";
+        loading.value = false;
+        return;
+    }
+
+    successMessage.value =
+        "Mensagem enviada com sucesso. Obrigado pelo contacto!";
+
+    name.value = "";
+    email.value = "";
+    subject.value = "";
+    message.value = "";
+
+    loading.value = false;
 };
 </script>
 
 <template>
-    <!-- Contact Section Start -->
-    <section id="contact" class="bg-theme-dark text-white py-24">
-        <div class="container mx-auto px-5">
-
-            <!-- Section Header -->
-            <div class="max-w-4xl mx-auto text-center">
+    <section
+        id="contact"
+        class="py-20 bg-white text-black"
+    >
+        <div class="container mx-auto px-6">
+            <!-- Header -->
+            <div class="text-center max-w-3xl mx-auto mb-12">
                 <p
-                    class="font-theme-heading text-theme-primary uppercase tracking-widest font-semibold mb-4"
+                    class="text-theme-primary font-semibold uppercase tracking-widest mb-3"
                 >
-                    Fala connosco
+                    Contactos
                 </p>
 
                 <h2
-                    class="text-4xl xl:text-5xl font-bold font-theme-heading mb-8"
+                    class="text-4xl md:text-5xl font-theme-heading font-bold mb-5"
                 >
-                    Contactos
+                    Fala connosco
                 </h2>
 
-                <p
-                    class="font-theme-content text-lg lg:text-xl leading-relaxed text-white/90"
-                >
-                    Tens alguma questão sobre o Kenpo, os treinos,
-                    inscrições ou o nosso dojo? Envia-nos uma mensagem.
+                <p class="text-gray-600">
+                    Tens alguma dúvida sobre o dojo, os treinos ou o
+                    Kenpo? Entra em contacto connosco.
                 </p>
             </div>
 
-            <!-- Contact Information + Map -->
             <div
-                class="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-6xl mx-auto mt-16"
+                class="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-6xl mx-auto"
             >
-
-                <!-- Contact Information -->
-                <div class="flex flex-col justify-center">
-
-                    <p
-                        class="font-theme-heading text-theme-primary uppercase tracking-widest font-semibold mb-4"
-                    >
-                        Estamos disponíveis
-                    </p>
-
+                <!-- Contact information -->
+                <div>
                     <h3
-                        class="text-3xl lg:text-4xl font-bold font-theme-heading mb-6"
+                        class="text-2xl font-theme-heading font-bold mb-6"
                     >
-                        Gostavas de saber mais?
+                        Encontra-nos
                     </h3>
 
-                    <p
-                        class="font-theme-content text-lg leading-relaxed text-white/80"
-                    >
-                        Entra em contacto connosco para esclarecer qualquer
-                        dúvida ou saber mais sobre as aulas e o funcionamento
-                        do Kolo'e Koa Dojo Kenpo.
-                    </p>
-
-                    <!-- Contact Details -->
-                    <div class="mt-8 space-y-5">
-
+                    <div class="space-y-5 text-gray-700">
                         <div>
                             <p
-                                class="font-theme-heading text-theme-primary font-semibold"
+                                class="text-theme-primary font-semibold"
                             >
-                                Email do dojo
+                                Email
                             </p>
 
                             <a
                                 href="mailto:JOHNY.KOLOE73@gmail.com"
-                                class="font-theme-content text-lg text-white/80 hover:text-theme-primary transition duration-300"
+                                class="hover:text-theme-primary transition"
                             >
                                 JOHNY.KOLOE73@gmail.com
                             </a>
@@ -93,14 +113,14 @@ const handleSubmit = () => {
 
                         <div>
                             <p
-                                class="font-theme-heading text-theme-primary font-semibold"
+                                class="text-theme-primary font-semibold"
                             >
-                                Telemóvel do dojo
+                                Telefone
                             </p>
 
                             <a
                                 href="tel:+351918444455"
-                                class="font-theme-content text-lg text-white/80 hover:text-theme-primary transition duration-300"
+                                class="hover:text-theme-primary transition"
                             >
                                 918 444 455
                             </a>
@@ -108,103 +128,79 @@ const handleSubmit = () => {
 
                         <div>
                             <p
-                                class="font-theme-heading text-theme-primary font-semibold"
+                                class="text-theme-primary font-semibold"
                             >
                                 Localização
                             </p>
 
-                            <p
-                                class="font-theme-content text-lg text-white/80"
-                            >
-                                Casa do Benfica da Castanheira do Ribatejo - Kolo'e Koa Dojo Kenpo
+                            <p>
+                                Castanheira do Ribatejo, Portugal
                             </p>
                         </div>
-
                     </div>
 
                     <!-- Google Maps -->
-                    <div class="mt-10">
-
-                        <div
-                            class="border border-theme-primary overflow-hidden"
-                        >
-                            <iframe
-                                src="https://www.google.com/maps?q=38.993384,-8.973076&z=15&output=embed"
-                                width="100%"
-                                height="350"
-                                style="border:0;"
-                                allowfullscreen=""
-                                loading="lazy"
-                                referrerpolicy="no-referrer-when-downgrade"
-                                title="Localização do Kolo'e Koa Dojo Kenpo"
-                            ></iframe>
-                        </div>
-
-                        <a
-                            href="https://maps.app.goo.gl/otB1s1GRvo3hzoSp7"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="inline-block mt-4 border border-theme-primary px-6 py-3 text-white font-theme-heading font-semibold hover:bg-theme-primary transition duration-300"
-                        >
-                            Obter direções
-                        </a>
-
+                    <div
+                        class="mt-8 overflow-hidden rounded-xl border border-gray-200"
+                    >
+                        <iframe
+                            src="https://www.google.com/maps?q=38.993384,-8.973076&z=15&output=embed"
+                            width="100%"
+                            height="320"
+                            style="border: 0"
+                            allowfullscreen=""
+                            loading="lazy"
+                            referrerpolicy="no-referrer-when-downgrade"
+                        ></iframe>
                     </div>
-
                 </div>
 
-                <!-- Contact Form -->
+                <!-- Contact form -->
                 <div
-                    class="bg-black/60 border border-theme-primary p-8 lg:p-10"
+                    class="bg-gray-50 rounded-2xl p-6 md:p-8 border border-gray-200"
                 >
-
-                    <!-- Success Message -->
-                    <div
-                        v-if="submitted"
-                        class="text-center py-12"
+                    <h3
+                        class="text-2xl font-theme-heading font-bold mb-6"
                     >
-                        <div
-                            class="text-theme-primary text-5xl font-bold font-theme-heading mb-6"
-                        >
-                            ✓
-                        </div>
+                        Envia-nos uma mensagem
+                    </h3>
 
-                        <h3
-                            class="text-2xl font-bold font-theme-heading mb-4"
-                        >
-                            Mensagem enviada
-                        </h3>
-
-                        <p
-                            class="font-theme-content text-lg text-white/80"
-                        >
-                            Obrigado pelo contacto. Responderemos
-                            assim que possível.
-                        </p>
+                    <!-- Success -->
+                    <div
+                        v-if="successMessage"
+                        class="mb-6 rounded-lg bg-green-100 border border-green-300 text-green-800 px-4 py-3"
+                    >
+                        {{ successMessage }}
                     </div>
 
-                    <!-- Form -->
-                    <form
-                        v-else
-                        @submit.prevent="handleSubmit"
-                        class="space-y-6"
+                    <!-- Error -->
+                    <div
+                        v-if="errorMessage"
+                        class="mb-6 rounded-lg bg-red-100 border border-red-300 text-red-800 px-4 py-3"
                     >
+                        {{ errorMessage }}
+                    </div>
 
+                    <form
+                        @submit.prevent="submitForm"
+                        class="space-y-5"
+                    >
                         <!-- Name -->
                         <div>
                             <label
-                                for="name"
-                                class="block font-theme-heading font-semibold mb-2"
+                                for="contact-name"
+                                class="block text-sm font-semibold mb-2"
                             >
                                 Nome
                             </label>
 
                             <input
-                                id="name"
-                                v-model="form.name"
+                                id="contact-name"
+                                v-model="name"
                                 type="text"
+                                autocomplete="name"
                                 required
-                                class="w-full bg-white text-black border-0 px-4 py-3 focus:ring-2 focus:ring-theme-primary"
+                                class="w-full rounded-lg border-gray-300 focus:border-theme-primary focus:ring-theme-primary"
                                 placeholder="O teu nome"
                             />
                         </div>
@@ -212,18 +208,19 @@ const handleSubmit = () => {
                         <!-- Email -->
                         <div>
                             <label
-                                for="email"
-                                class="block font-theme-heading font-semibold mb-2"
+                                for="contact-email"
+                                class="block text-sm font-semibold mb-2"
                             >
                                 Email
                             </label>
 
                             <input
-                                id="email"
-                                v-model="form.email"
+                                id="contact-email"
+                                v-model="email"
                                 type="email"
+                                autocomplete="email"
                                 required
-                                class="w-full bg-white text-black border-0 px-4 py-3 focus:ring-2 focus:ring-theme-primary"
+                                class="w-full rounded-lg border-gray-300 focus:border-theme-primary focus:ring-theme-primary"
                                 placeholder="O teu email"
                             />
                         </div>
@@ -231,18 +228,18 @@ const handleSubmit = () => {
                         <!-- Subject -->
                         <div>
                             <label
-                                for="subject"
-                                class="block font-theme-heading font-semibold mb-2"
+                                for="contact-subject"
+                                class="block text-sm font-semibold mb-2"
                             >
                                 Assunto
                             </label>
 
                             <input
-                                id="subject"
-                                v-model="form.subject"
+                                id="contact-subject"
+                                v-model="subject"
                                 type="text"
                                 required
-                                class="w-full bg-white text-black border-0 px-4 py-3 focus:ring-2 focus:ring-theme-primary"
+                                class="w-full rounded-lg border-gray-300 focus:border-theme-primary focus:ring-theme-primary"
                                 placeholder="Assunto da mensagem"
                             />
                         </div>
@@ -250,37 +247,37 @@ const handleSubmit = () => {
                         <!-- Message -->
                         <div>
                             <label
-                                for="message"
-                                class="block font-theme-heading font-semibold mb-2"
+                                for="contact-message"
+                                class="block text-sm font-semibold mb-2"
                             >
                                 Mensagem
                             </label>
 
                             <textarea
-                                id="message"
-                                v-model="form.message"
+                                id="contact-message"
+                                v-model="message"
                                 rows="6"
                                 required
-                                class="w-full bg-white text-black border-0 px-4 py-3 resize-none focus:ring-2 focus:ring-theme-primary"
-                                placeholder="Escreve aqui a tua questão..."
+                                class="w-full rounded-lg border-gray-300 focus:border-theme-primary focus:ring-theme-primary resize-none"
+                                placeholder="Escreve a tua mensagem..."
                             ></textarea>
                         </div>
 
                         <!-- Submit -->
                         <button
                             type="submit"
-                            class="w-full bg-theme-primary text-white font-theme-heading font-bold py-4 px-6 hover:bg-white hover:text-theme-primary transition duration-300 border border-theme-primary"
+                            :disabled="loading"
+                            class="w-full bg-theme-primary text-white font-semibold py-3 px-6 rounded-lg transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Enviar mensagem
+                            {{
+                                loading
+                                    ? "A enviar..."
+                                    : "Enviar mensagem"
+                            }}
                         </button>
-
                     </form>
-
                 </div>
-
             </div>
-
         </div>
     </section>
-    <!-- Contact Section End -->
 </template>

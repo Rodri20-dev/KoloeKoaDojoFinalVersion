@@ -1,166 +1,257 @@
 <script setup>
+import { computed, onMounted, ref } from "vue";
+import { supabase } from "../lib/supabase";
+
+const videos = ref([]);
+const loading = ref(true);
+
+const activeCategory = ref("Todos");
+
+const categories = [
+    "Todos",
+    "Treinos",
+    "Demonstrações",
+    "Eventos",
+    "Outros",
+];
+
+const loadVideos = async () => {
+    loading.value = true;
+
+    const { data, error } = await supabase
+        .from("videos")
+        .select("*")
+        .eq("published", true)
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        console.error("Public videos error:", error);
+        loading.value = false;
+        return;
+    }
+
+    videos.value = data;
+    loading.value = false;
+};
+
+const filteredVideos = computed(() => {
+    if (activeCategory.value === "Todos") {
+        return videos.value;
+    }
+
+    return videos.value.filter(
+        (video) => video.category === activeCategory.value
+    );
+});
+
+const getLocalVideoUrl = (storagePath) => {
+    return supabase.storage
+        .from("videos")
+        .getPublicUrl(storagePath)
+        .data.publicUrl;
+};
+
+const getYoutubeEmbedUrl = (url) => {
+    try {
+        const parsedUrl = new URL(url);
+
+        /*
+         * URL normal:
+         * https://www.youtube.com/watch?v=ABC123
+         */
+        if (
+            parsedUrl.hostname === "www.youtube.com" ||
+            parsedUrl.hostname === "youtube.com"
+        ) {
+            const videoId = parsedUrl.searchParams.get("v");
+
+            if (videoId) {
+                return `https://www.youtube.com/embed/${videoId}`;
+            }
+        }
+
+        /*
+         * URL curta:
+         * https://youtu.be/ABC123
+         */
+        if (parsedUrl.hostname === "youtu.be") {
+            const videoId = parsedUrl.pathname.slice(1);
+
+            if (videoId) {
+                return `https://www.youtube.com/embed/${videoId}`;
+            }
+        }
+
+        /*
+         * Se já for um URL de embed
+         */
+        if (
+            parsedUrl.hostname === "www.youtube.com" ||
+            parsedUrl.hostname === "youtube.com"
+        ) {
+            if (parsedUrl.pathname.startsWith("/embed/")) {
+                return url;
+            }
+        }
+
+        return null;
+    } catch {
+        return null;
+    }
+};
+
+onMounted(() => {
+    loadVideos();
+});
 </script>
 
 <template>
-    <!-- Videos Section Start -->
-    <section id="videos" class="bg-theme-dark text-white py-24">
-        <div class="container mx-auto px-5">
+    <section
+        id="videos"
+        class="py-20 bg-white text-black"
+    >
+        <div class="container mx-auto px-6">
 
-            <!-- Section Header -->
-            <div class="max-w-4xl mx-auto text-center">
+            <!-- Cabeçalho -->
+            <div
+                class="text-center max-w-3xl mx-auto mb-12"
+            >
                 <p
-                    class="font-theme-heading text-theme-primary uppercase tracking-widest font-semibold mb-4"
+                    class="text-theme-primary font-semibold uppercase tracking-widest mb-3"
                 >
-                    Kenpo em ação
+                    Vídeos
                 </p>
 
                 <h2
-                    class="text-4xl xl:text-5xl font-bold font-theme-heading mb-8"
+                    class="text-4xl md:text-5xl font-theme-heading font-bold mb-5"
                 >
-                    Vídeos
+                    Momentos do nosso caminho
                 </h2>
 
-                <p
-                    class="font-theme-content text-lg lg:text-xl leading-relaxed text-white/90"
-                >
-                    Conhece melhor o nosso trabalho através de treinos,
-                    demonstrações, eventos e momentos do Kolo'e Koa Dojo Kenpo.
+                <p class="text-gray-600">
+                    Treinos, demonstrações, eventos e outros
+                    momentos vividos pela nossa Ohana.
                 </p>
             </div>
 
-            <!-- Videos Grid -->
+            <!-- Categorias -->
             <div
-                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-16 max-w-7xl mx-auto"
+                class="flex flex-wrap justify-center gap-3 mb-10"
             >
-
-                <!-- Video -->
-                <article
-                    class="border border-theme-primary overflow-hidden bg-black"
+                <button
+                    v-for="category in categories"
+                    :key="category"
+                    type="button"
+                    @click="activeCategory = category"
+                    class="px-4 py-2 rounded-full border transition"
+                    :class="
+                        activeCategory === category
+                            ? 'bg-theme-primary border-theme-primary text-white'
+                            : 'border-gray-300 text-gray-600 hover:border-theme-primary hover:text-black'
+                    "
                 >
-                    <div
-                        class="aspect-video flex items-center justify-center bg-black/80"
-                    >
-                        <div class="text-center">
-                            <div
-                                class="text-theme-primary text-5xl mb-4"
-                            >
-                                ▶
-                            </div>
-
-                            <p
-                                class="font-theme-heading text-white/60"
-                            >
-                                Vídeo em breve
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="p-6">
-                        <p
-                            class="text-theme-primary font-theme-heading text-sm uppercase tracking-wider mb-2"
-                        >
-                            Treinos
-                        </p>
-
-                        <h3
-                            class="text-xl font-bold font-theme-heading"
-                        >
-                            Treino no dojo
-                        </h3>
-                    </div>
-                </article>
-
-                <!-- Video -->
-                <article
-                    class="border border-theme-primary overflow-hidden bg-black"
-                >
-                    <div
-                        class="aspect-video flex items-center justify-center bg-black/80"
-                    >
-                        <div class="text-center">
-                            <div
-                                class="text-theme-primary text-5xl mb-4"
-                            >
-                                ▶
-                            </div>
-
-                            <p
-                                class="font-theme-heading text-white/60"
-                            >
-                                Vídeo em breve
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="p-6">
-                        <p
-                            class="text-theme-primary font-theme-heading text-sm uppercase tracking-wider mb-2"
-                        >
-                            Demonstrações
-                        </p>
-
-                        <h3
-                            class="text-xl font-bold font-theme-heading"
-                        >
-                            Kenpo em demonstração
-                        </h3>
-                    </div>
-                </article>
-
-                <!-- Video -->
-                <article
-                    class="border border-theme-primary overflow-hidden bg-black"
-                >
-                    <div
-                        class="aspect-video flex items-center justify-center bg-black/80"
-                    >
-                        <div class="text-center">
-                            <div
-                                class="text-theme-primary text-5xl mb-4"
-                            >
-                                ▶
-                            </div>
-
-                            <p
-                                class="font-theme-heading text-white/60"
-                            >
-                                Vídeo em breve
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="p-6">
-                        <p
-                            class="text-theme-primary font-theme-heading text-sm uppercase tracking-wider mb-2"
-                        >
-                            Eventos
-                        </p>
-
-                        <h3
-                            class="text-xl font-bold font-theme-heading"
-                        >
-                            Momentos do dojo
-                        </h3>
-                    </div>
-                </article>
-
+                    {{ category }}
+                </button>
             </div>
 
-            <!-- Closing -->
-            <div class="max-w-3xl mx-auto text-center mt-16">
-                <div
-                    class="w-24 h-1 bg-theme-primary mx-auto mb-8"
-                ></div>
+            <!-- Loading -->
+            <div
+                v-if="loading"
+                class="text-center py-12 text-gray-500"
+            >
+                A carregar os vídeos...
+            </div>
 
-                <p
-                    class="font-theme-content text-lg lg:text-xl text-white/70"
-                >
-                    Em breve poderás acompanhar aqui mais momentos
-                    do nosso caminho.
+            <!-- Sem vídeos -->
+            <div
+                v-else-if="filteredVideos.length === 0"
+                class="text-center py-12"
+            >
+                <p class="text-gray-500">
+                    Ainda não existem vídeos nesta categoria.
                 </p>
             </div>
 
+            <!-- Vídeos -->
+            <div
+                v-else
+                class="grid grid-cols-1 lg:grid-cols-2 gap-8"
+            >
+                <article
+                    v-for="video in filteredVideos"
+                    :key="video.id"
+                    class="bg-gray-100 rounded-xl overflow-hidden shadow-sm"
+                >
+                    <!-- Área do vídeo -->
+                    <div
+                        class="aspect-video bg-black overflow-hidden"
+                    >
+                        <!-- Vídeo local -->
+                        <video
+                            v-if="video.video_type === 'local'"
+                            :src="
+                                getLocalVideoUrl(
+                                    video.video_url
+                                )
+                            "
+                            controls
+                            preload="metadata"
+                            class="w-full h-full object-contain"
+                        ></video>
+
+                        <!-- YouTube -->
+                        <iframe
+                            v-else-if="
+                                video.video_type === 'youtube' &&
+                                getYoutubeEmbedUrl(
+                                    video.video_url
+                                )
+                            "
+                            :src="
+                                getYoutubeEmbedUrl(
+                                    video.video_url
+                                )
+                            "
+                            :title="video.title"
+                            class="w-full h-full"
+                            frameborder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowfullscreen
+                        ></iframe>
+
+                        <!-- URL inválido -->
+                        <div
+                            v-else
+                            class="w-full h-full flex items-center justify-center text-gray-400 px-6 text-center"
+                        >
+                            Não foi possível carregar este
+                            vídeo.
+                        </div>
+                    </div>
+
+                    <!-- Informação -->
+                    <div class="p-6">
+                        <p
+                            class="text-theme-primary text-sm font-semibold uppercase tracking-wide mb-2"
+                        >
+                            {{ video.category }}
+                        </p>
+
+                        <h3
+                            class="text-2xl font-theme-heading font-semibold"
+                        >
+                            {{ video.title }}
+                        </h3>
+
+                        <p
+                            v-if="video.description"
+                            class="text-gray-600 mt-3"
+                        >
+                            {{ video.description }}
+                        </p>
+                    </div>
+                </article>
+            </div>
         </div>
     </section>
-    <!-- Videos Section End -->
 </template>

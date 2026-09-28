@@ -1,5 +1,12 @@
 <script setup>
 import { ref } from "vue";
+import { useRouter } from "vue-router";
+
+const router = useRouter();
+
+const goToAdmin = () => {
+    router.push("/admin/login");
+};
 
 const mobileNav = ref(false);
 
@@ -124,6 +131,29 @@ const closeMobileNav = () => {
                                 Contactos
                             </a>
                         </li>
+
+                        <button
+                            type="button"
+                            @click="goToAdmin"
+                            aria-label="Área Reservada"
+                            title="Área Reservada"
+                            class="flex items-center justify-center ml-4 text-white transition hover:text-theme-primary"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke-width="1.8"
+                                stroke="currentColor"
+                                class="w-6 h-6"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25a8.25 8.25 0 0 1 15 0"
+                                />
+                            </svg>
+                        </button>
 
                     </ul>
 
@@ -289,6 +319,28 @@ const closeMobileNav = () => {
                                 Contactos
                             </a>
                         </li>
+                        <button
+                            type="button"
+                            @click="goToAdmin"
+                            class="flex items-center gap-3 w-full py-3 text-left text-white transition hover:text-theme-primary"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke-width="1.8"
+                                stroke="currentColor"
+                                class="w-6 h-6"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25a8.25 8.25 0 0 1 15 0"
+                                />
+                            </svg>
+
+                            <span>Área Reservada</span>
+                        </button>
 
                     </ul>
 

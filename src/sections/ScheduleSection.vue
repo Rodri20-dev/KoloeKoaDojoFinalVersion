@@ -1,96 +1,168 @@
 <script setup>
+import { computed, onMounted, ref } from "vue";
+import { supabase } from "../lib/supabase";
+
+const schedules = ref([]);
+const loading = ref(true);
+
+const daysOfWeek = [
+    { value: 1, label: "Segunda-feira" },
+    { value: 2, label: "Terça-feira" },
+    { value: 3, label: "Quarta-feira" },
+    { value: 4, label: "Quinta-feira" },
+    { value: 5, label: "Sexta-feira" },
+    { value: 6, label: "Sábado" },
+    { value: 7, label: "Domingo" },
+];
+
+const loadSchedules = async () => {
+    loading.value = true;
+
+    const { data, error } = await supabase
+        .from("schedule")
+        .select("*")
+        .eq("active", true)
+        .order("day_of_week", { ascending: true })
+        .order("start_time", { ascending: true });
+
+    if (error) {
+        console.error("Public schedule error:", error);
+        loading.value = false;
+        return;
+    }
+
+    schedules.value = data;
+    loading.value = false;
+};
+
+const groupedSchedules = computed(() => {
+    return daysOfWeek
+        .map((day) => ({
+            ...day,
+            schedules: schedules.value.filter(
+                (schedule) =>
+                    schedule.day_of_week === day.value
+            ),
+        }))
+        .filter((day) => day.schedules.length > 0);
+});
+
+const formatTime = (time) => {
+    return time.slice(0, 5);
+};
+
+onMounted(() => {
+    loadSchedules();
+});
 </script>
 
 <template>
-    <!-- Schedule Section Start -->
-    <section id="schedule" class="bg-white text-black py-24">
-        <div class="container mx-auto px-5">
+    <section
+        id="schedule"
+        class="py-20 bg-black text-white"
+    >
+        <div class="container mx-auto px-6">
 
-            <!-- Section Header -->
-            <div class="max-w-4xl mx-auto text-center">
+            <!-- Cabeçalho -->
+            <div
+                class="text-center max-w-3xl mx-auto mb-12"
+            >
                 <p
-                    class="font-theme-heading text-theme-primary uppercase tracking-widest font-semibold mb-4"
+                    class="text-theme-primary font-semibold uppercase tracking-widest mb-3"
                 >
-                    Junta-te a nós
+                    Horários
                 </p>
 
                 <h2
-                    class="text-4xl xl:text-5xl font-bold font-theme-heading mb-8"
+                    class="text-4xl md:text-5xl font-theme-heading font-bold mb-5"
                 >
-                    Horários
+                    Horários de treino
                 </h2>
 
-                <p
-                    class="font-theme-content text-lg lg:text-xl leading-relaxed text-black/80"
-                >
-                    Consulta os horários dos nossos treinos e encontra
-                    o momento certo para começares o teu caminho no Kenpo.
+                <p class="text-gray-300">
+                    Consulta os horários das nossas aulas e
+                    encontra o momento certo para fazer parte
+                    da nossa Ohana.
                 </p>
             </div>
 
-            <!-- Schedule -->
-            <div class="max-w-5xl mx-auto mt-16">
-
-                <div
-                    class="overflow-hidden border border-theme-primary"
-                >
-                    <!-- Header -->
-                    <div
-                        class="grid grid-cols-2 bg-theme-primary text-white font-theme-heading font-bold"
-                    >
-                        <div class="p-5 text-center">
-                            Dia
-                        </div>
-
-                        <div class="p-5 text-center">
-                            Horário
-                        </div>
-                    </div>
-
-                    <!-- Monday -->
-                    <div
-                        class="grid grid-cols-2 border-t border-theme-primary"
-                    >
-                        <div class="p-5 text-center font-theme-heading font-semibold">
-                            Terça-feira
-
-                            <p></p>
-                        </div>
-
-                        <div class="p-5 text-center font-theme-content">
-                            <p>Kenpo Keikis (4-12 anos) - 18:30 às 19:30</p>
-                            <p>Adultos (13+ anos) - 19:30 às 21:00</p>
-                        </div>
-                    </div>
-
-                    <!-- Wednesday -->
-                    <div
-                        class="grid grid-cols-2 border-t border-theme-primary bg-gray-50"
-                    >
-                        <div class="p-5 text-center font-theme-heading font-semibold">
-                            Quinta-feira
-                        </div>
-
-                        <div class="p-5 text-center font-theme-content">
-                            <p>Kenpo Keikis (4-12 anos) - 18:30 às 19:30</p>
-                            <p>Adultos (13+ anos) - 19:30 às 21:00</p>
-                        </div>
-                    </div>
-                </div>
-
+            <!-- Loading -->
+            <div
+                v-if="loading"
+                class="text-center py-12 text-gray-400"
+            >
+                A carregar os horários...
             </div>
 
-            <!-- Schedule Note -->
-            <div class="max-w-3xl mx-auto text-center mt-12">
-                <p
-                    class="font-theme-content text-lg text-black/60"
-                >
-                    Para informações sobre inscrições, aulas experimentais
-                    ou outros horários, entra em contacto connosco.
+            <!-- Sem horários -->
+            <div
+                v-else-if="groupedSchedules.length === 0"
+                class="text-center py-12"
+            >
+                <p class="text-gray-400">
+                    Os horários de treino serão disponibilizados
+                    em breve.
                 </p>
+            </div>
+
+            <!-- Horários -->
+            <div
+                v-else
+                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto"
+            >
+                <article
+                    v-for="day in groupedSchedules"
+                    :key="day.value"
+                    class="bg-gray-900 rounded-xl p-6 border border-gray-800"
+                >
+                    <!-- Dia -->
+                    <div
+                        class="flex items-center justify-between mb-5"
+                    >
+                        <h3
+                            class="text-xl font-theme-heading font-semibold"
+                        >
+                            {{ day.label }}
+                        </h3>
+
+                        <div
+                            class="w-2 h-2 rounded-full bg-theme-primary"
+                        ></div>
+                    </div>
+
+                    <!-- Aulas -->
+                    <div class="space-y-4">
+                        <div
+                            v-for="schedule in day.schedules"
+                            :key="schedule.id"
+                            class="border-l-2 border-theme-primary pl-4"
+                        >
+                            <p
+                                class="text-theme-primary font-semibold"
+                            >
+                                {{ formatTime(schedule.start_time) }}
+                                —
+                                {{ formatTime(schedule.end_time) }}
+                            </p>
+
+                            <h4
+                                v-if="schedule.title"
+                                class="text-white font-semibold mt-1"
+                            >
+                                {{ schedule.title }}
+                            </h4>
+
+                            <p
+                                v-if="schedule.description"
+                                class="text-gray-400 text-sm mt-1"
+                            >
+                                {{ schedule.description }}
+                            </p>
+                        </div>
+                    </div>
+                </article>
             </div>
 
         </div>
     </section>
-    <!-- Schedule Section End -->
 </template>
