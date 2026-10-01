@@ -24,7 +24,7 @@ const closeMobileNav = () => {
     <div class="bg-theme-dark text-white">
         <div class="container mx-auto px-5">
 
-            <header class="flex justify-between py-8 items-center">
+            <header class="flex justify-between items-center py-4 md:py-8">
 
                 <!-- Logo -->
                 <div>
@@ -32,7 +32,7 @@ const closeMobileNav = () => {
                         <img
                             src="/images/KoloeKoaLogo.jpeg"
                             alt="Kolo'e Koa Dojo Kenpo"
-                            class="h-16 w-auto object-contain"
+                            class="h-12 md:h-16 w-auto object-contain"
                         />
                     </a>
                 </div>
@@ -164,7 +164,7 @@ const closeMobileNav = () => {
             <div v-if="mobileNav">
 
                 <div
-                    class="fixed inset-0 z-50 bg-theme-dark px-5 py-8 overflow-y-auto"
+                    class="fixed inset-0 z-50 isolate bg-black px-5 py-5 overflow-y-auto"
                 >
 
                     <!-- Mobile Header -->
@@ -178,7 +178,7 @@ const closeMobileNav = () => {
                             <img
                                 src="/images/KoloeKoaLogo.jpeg"
                                 alt="Kolo'e Koa Dojo Kenpo"
-                                class="h-16 w-16 object-contain"
+                                class="h-12 w-12 object-contain"
                             />
                         </a>
 
@@ -207,7 +207,7 @@ const closeMobileNav = () => {
 
                     <!-- Mobile Links -->
                     <ul
-                        class="uppercase text-white text-md tracking-widest items-center flex flex-col mt-14"
+                        class="uppercase text-white text-sm tracking-widest items-center flex flex-col mt-8"
                     >
 
                         <li class="mobile-nav-item">
@@ -356,7 +356,7 @@ const closeMobileNav = () => {
 
 <style scoped>
 .mobile-nav-item {
-    @apply hover:text-theme-secondary transition duration-200 py-4 border-b border-white w-full text-center;
+    @apply hover:text-theme-secondary transition duration-200 py-3 border-b border-white w-full text-center;
 }
 
 .mobile-nav-item:first-child {

@@ -25,3 +25,6 @@ dist-ssr
 
 # Ignore .env file
 .env
+
+# Ignore .env file in supabase/functions directory
+supabase/functions/.env
