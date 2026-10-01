@@ -1,160 +1,20 @@
 <script setup>
-import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
-import { supabase } from "../lib/supabase";
 
-const loading = ref(true);
-const errorMessage = ref("");
+import { useDashboard } from "../composables/useDashboard";
 
-const stats = ref({
-    gallery: 0,
-    videos: 0,
-    schedules: 0,
-    messages: 0,
-    newMessages: 0,
-});
+const {
+    loading,
+    errorMessage,
+    stats,
+    recentMessages,
 
-const recentMessages = ref([]);
-
-const loadDashboard = async () => {
-    loading.value = true;
-    errorMessage.value = "";
-
-    try {
-        const [
-            galleryResult,
-            videosResult,
-            scheduleResult,
-            messagesResult,
-            newMessagesResult,
-            recentMessagesResult,
-        ] = await Promise.all([
-            supabase
-                .from("gallery_items")
-                .select("*", { count: "exact", head: true }),
-
-            supabase
-                .from("videos")
-                .select("*", { count: "exact", head: true }),
-
-            supabase
-                .from("schedule")
-                .select("*", { count: "exact", head: true })
-                .eq("active", true),
-
-            supabase
-                .from("contact_messages")
-                .select("*", { count: "exact", head: true }),
-
-            supabase
-                .from("contact_messages")
-                .select("*", { count: "exact", head: true })
-                .eq("status", "new"),
-
-            supabase
-                .from("contact_messages")
-                .select("*")
-                .order("created_at", {
-                    ascending: false,
-                })
-                .limit(5),
-        ]);
-
-        const results = [
-            galleryResult,
-            videosResult,
-            scheduleResult,
-            messagesResult,
-            newMessagesResult,
-            recentMessagesResult,
-        ];
-
-        const failedResult = results.find(
-            (result) => result.error
-        );
-
-        if (failedResult) {
-            console.error(
-                "Dashboard query error:",
-                failedResult.error
-            );
-
-            throw new Error(
-                "Não foi possível carregar todos os dados do dashboard."
-            );
-        }
-
-        stats.value = {
-            gallery: galleryResult.count ?? 0,
-            videos: videosResult.count ?? 0,
-            schedules: scheduleResult.count ?? 0,
-            messages: messagesResult.count ?? 0,
-            newMessages: newMessagesResult.count ?? 0,
-        };
-
-        recentMessages.value =
-            recentMessagesResult.data ?? [];
-    } catch (error) {
-        console.error("Dashboard error:", error);
-
-        errorMessage.value =
-            error.message ||
-            "Ocorreu um erro ao carregar o dashboard.";
-    } finally {
-        loading.value = false;
-    }
-};
-
-const formatDate = (date) => {
-    return new Intl.DateTimeFormat("pt-PT", {
-        dateStyle: "short",
-        timeStyle: "short",
-    }).format(new Date(date));
-};
-
-const getStatusLabel = (status) => {
-    const labels = {
-        new: "Nova",
-        read: "Lida",
-        replied: "Respondida",
-    };
-
-    return labels[status] || status;
-};
-
-const getStatusClass = (status) => {
-    if (status === "new") {
-        return "bg-yellow-100 text-yellow-800";
-    }
-
-    if (status === "read") {
-        return "bg-blue-100 text-blue-800";
-    }
-
-    if (status === "replied") {
-        return "bg-green-100 text-green-800";
-    }
-
-    return "bg-gray-100 text-gray-800";
-};
-
-const greeting = computed(() => {
-    const hour = new Date().getHours();
-
-    if (hour < 12) {
-        return "Bom dia";
-    }
-
-    if (hour < 19) {
-        return "Boa tarde";
-    }
-
-    return "Boa noite";
-});
-
-onMounted(() => {
-    loadDashboard();
-});
+    loadDashboard,
+    formatDate,
+    getStatusLabel,
+    getStatusClass,
+    greeting,
+} = useDashboard();
 </script>
 
 <template>

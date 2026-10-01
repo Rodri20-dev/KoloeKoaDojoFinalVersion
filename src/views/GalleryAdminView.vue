@@ -1,311 +1,29 @@
 <script setup>
-import { onMounted, ref } from "vue";
-import { supabase } from "../lib/supabase";
+import { useGallery } from "../composables/useGallery";
 
-const galleryItems = ref([]);
-
-const loading = ref(true);
-const editingItem = ref(null);
-const saving = ref(false);
-
-const errorMessage = ref("");
-const successMessage = ref("");
-
-const showForm = ref(false);
-
-const title = ref("");
-const description = ref("");
-const category = ref("Treinos");
-const selectedFile = ref(null);
-
-const categories = [
-    "Treinos",
-    "Graduações",
-    "Seminários",
-    "Eventos",
-    "Demonstrações",
-    "Outros",
-];
-
-const loadGalleryItems = async () => {
-    loading.value = true;
-    errorMessage.value = "";
-
-    const { data, error } = await supabase
-        .from("gallery_items")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-    if (error) {
-        console.error("Gallery error:", error);
-        errorMessage.value = "Não foi possível carregar a galeria.";
-        loading.value = false;
-        return;
-    }
-
-    galleryItems.value = data;
-    loading.value = false;
-};
-
-const handleFileChange = (event) => {
-    selectedFile.value = event.target.files[0] || null;
-};
-
-const resetForm = () => {
-    title.value = "";
-    description.value = "";
-    category.value = "Treinos";
-    selectedFile.value = null;
-
-    const fileInput = document.getElementById("gallery-file");
-
-    if (fileInput) {
-        fileInput.value = "";
-    }
-};
-
-const closeForm = () => {
-    if (saving.value) return;
-
-    showForm.value = false;
-    resetForm();
-    errorMessage.value = "";
-    successMessage.value = "";
-};
-
-const handleSubmit = async () => {
-    errorMessage.value = "";
-    successMessage.value = "";
-
-    if (!title.value.trim()) {
-        errorMessage.value = "Indica um título para a fotografia.";
-        return;
-    }
-
-    if (!selectedFile.value) {
-        errorMessage.value = "Seleciona uma fotografia.";
-        return;
-    }
-
-    saving.value = true;
-
-    try {
-        const file = selectedFile.value;
-
-        const allowedTypes = [
-            "image/jpeg",
-            "image/png",
-            "image/webp",
-        ];
-
-        if (!allowedTypes.includes(file.type)) {
-            throw new Error(
-                "Formato inválido. Utiliza JPG, PNG ou WebP."
-            );
-        }
-
-        const maxSize = 10 * 1024 * 1024;
-
-        if (file.size > maxSize) {
-            throw new Error(
-                "A fotografia não pode ultrapassar os 10 MB."
-            );
-        }
-
-        const fileExtension = file.name.split(".").pop();
-
-        const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExtension}`;
-
-        const filePath = `gallery/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-            .from("gallery")
-            .upload(filePath, file, {
-                cacheControl: "3600",
-                upsert: false,
-            });
-
-        if (uploadError) {
-            console.error("Storage upload error:", uploadError);
-            throw new Error(
-                "Não foi possível fazer o upload da fotografia."
-            );
-        }
-
-        const { error: databaseError } = await supabase
-            .from("gallery_items")
-            .insert({
-                title: title.value.trim(),
-                description: description.value.trim() || null,
-                category: category.value,
-                storage_path: filePath,
-                published: true,
-            });
-
-        if (databaseError) {
-            console.error("Database insert error:", databaseError);
-
-            await supabase.storage
-                .from("gallery")
-                .remove([filePath]);
-
-            throw new Error(
-                "A fotografia foi enviada, mas não foi possível guardar os seus dados."
-            );
-        }
-
-        successMessage.value =
-            "Fotografia adicionada com sucesso.";
-
-        await loadGalleryItems();
-
-        resetForm();
-
-        setTimeout(() => {
-            showForm.value = false;
-            successMessage.value = "";
-        }, 1200);
-    } catch (error) {
-        errorMessage.value =
-            error.message || "Ocorreu um erro ao adicionar a fotografia.";
-    } finally {
-        saving.value = false;
-    }
-};
-
-const startEditing = (item) => {
-    editingItem.value = {
-        id: item.id,
-        title: item.title,
-        description: item.description || "",
-        category: item.category,
-        published: item.published,
-    };
-
-    errorMessage.value = "";
-    successMessage.value = "";
-};
-
-const cancelEditing = () => {
-    editingItem.value = null;
-    errorMessage.value = "";
-};
-
-const updateGalleryItem = async () => {
-    if (!editingItem.value) {
-        return;
-    }
-
-    errorMessage.value = "";
-    successMessage.value = "";
-
-    if (!editingItem.value.title.trim()) {
-        errorMessage.value = "O título é obrigatório.";
-        return;
-    }
-
-    saving.value = true;
-
-    try {
-        const { data, error } = await supabase
-            .from("gallery_items")
-            .update({
-                title: editingItem.value.title.trim(),
-                description:
-                    editingItem.value.description.trim() || null,
-                category: editingItem.value.category,
-                published: editingItem.value.published,
-                updated_at: new Date().toISOString(),
-            })
-            .eq("id", editingItem.value.id)
-            .select()
-            .single();
-
-        if (error) {
-            console.error("Gallery update error:", error);
-
-            throw new Error(
-                "Não foi possível atualizar a fotografia."
-            );
-        }
-
-        galleryItems.value = galleryItems.value.map((item) =>
-            item.id === data.id ? data : item
-        );
-
-        editingItem.value = null;
-
-        successMessage.value =
-            "Fotografia atualizada com sucesso.";
-    } catch (error) {
-        errorMessage.value =
-            error.message ||
-            "Ocorreu um erro ao atualizar a fotografia.";
-    } finally {
-        saving.value = false;
-    }
-};
-
-const deletingId = ref(null);
-
-const deleteGalleryItem = async (item) => {
-    const confirmed = window.confirm(
-        `Tens a certeza que queres eliminar "${item.title}"?`
-    );
-
-    if (!confirmed) {
-        return;
-    }
-
-    errorMessage.value = "";
-    successMessage.value = "";
-    deletingId.value = item.id;
-
-    try {
-        // 1. Apagar o ficheiro do Storage
-        const { error: storageError } = await supabase.storage
-            .from("gallery")
-            .remove([item.storage_path]);
-
-        if (storageError) {
-            console.error("Storage delete error:", storageError);
-
-            throw new Error(
-                "Não foi possível eliminar a fotografia do Storage."
-            );
-        }
-
-        // 2. Apagar o registo da base de dados
-        const { error: databaseError } = await supabase
-            .from("gallery_items")
-            .delete()
-            .eq("id", item.id);
-
-        if (databaseError) {
-            console.error("Database delete error:", databaseError);
-
-            throw new Error(
-                "A fotografia foi removida do Storage, mas não foi possível remover o registo da galeria."
-            );
-        }
-
-        // 3. Atualizar a lista
-        galleryItems.value = galleryItems.value.filter(
-            (galleryItem) => galleryItem.id !== item.id
-        );
-
-        successMessage.value =
-            "Fotografia eliminada com sucesso.";
-    } catch (error) {
-        errorMessage.value =
-            error.message || "Ocorreu um erro ao eliminar a fotografia.";
-    } finally {
-        deletingId.value = null;
-    }
-};
-onMounted(() => {
-    loadGalleryItems();
-});
+const {
+    galleryItems,
+    loading,
+    saving,
+    deletingId,
+    editingItem,
+    showForm,
+    title,
+    description,
+    category,
+    selectedFile,
+    categories,
+    errorMessage,
+    successMessage,
+    handleFileChange,
+    closeForm,
+    handleSubmit,
+    startEditing,
+    cancelEditing,
+    saveEditing,
+    deleteItem,
+    getImageUrl,
+} = useGallery();
 </script>
 
 <template>
@@ -544,7 +262,7 @@ onMounted(() => {
             </div>
 
             <form
-                @submit.prevent="updateGalleryItem"
+                @submit.prevent="saveEditing"
                 class="space-y-5"
             >
                 <!-- Title -->
@@ -655,9 +373,7 @@ onMounted(() => {
             >
                 <div class="aspect-video bg-gray-100">
                     <img
-                        :src="supabase.storage
-                            .from('gallery')
-                            .getPublicUrl(item.storage_path).data.publicUrl"
+                        :src="getImageUrl(item.storage_path)"
                         :alt="item.title"
                         class="w-full h-full object-cover"
                     />
@@ -689,7 +405,7 @@ onMounted(() => {
 
                     <button
                         type="button"
-                        @click="deleteGalleryItem(item)"
+                        @click="deleteItem(item)"
                         :disabled="deletingId === item.id"
                         class="mt-5 w-full px-4 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition disabled:opacity-50"
                     >

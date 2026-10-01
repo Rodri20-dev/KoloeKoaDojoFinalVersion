@@ -1,319 +1,37 @@
 <script setup>
-import { onMounted, ref } from "vue";
-import { supabase } from "../lib/supabase";
-
-const profile = ref(null);
-
-const fullName = ref("");
-const email = ref("");
-
-const avatarPreview = ref("");
-const selectedAvatar = ref(null);
-
-const loading = ref(true);
-const savingProfile = ref(false);
-const uploadingAvatar = ref(false);
-const removingAvatar = ref(false);
-
-const successMessage = ref("");
-const errorMessage = ref("");
-
-const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
-
-const allowedAvatarTypes = [
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-];
-
-const loadProfile = async () => {
-    loading.value = true;
-    errorMessage.value = "";
-
-    const {
-        data: { user },
-        error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-        errorMessage.value =
-            "Não foi possível identificar o utilizador.";
-        loading.value = false;
-        return;
-    }
-
-    email.value = user.email || "";
-
-    const { data, error } = await supabase.rpc(
-        "get_my_profile"
-    );
-
-    if (error) {
-        console.error("Profile load error:", error);
-
-        errorMessage.value =
-            "Não foi possível carregar o perfil.";
-        loading.value = false;
-        return;
-    }
-
-    const profileData = data?.[0];
-
-    if (!profileData) {
-        errorMessage.value =
-            "Não foi encontrado um perfil para este utilizador.";
-        loading.value = false;
-        return;
-    }
-
-    profile.value = profileData;
-
-    fullName.value = profileData.full_name || "";
-
-    if (
-        profileData.avatar_base64 &&
-        profileData.avatar_mime_type
-    ) {
-        avatarPreview.value =
-            `data:${profileData.avatar_mime_type};base64,${profileData.avatar_base64}`;
-    } else {
-        avatarPreview.value = "";
-    }
-
-    loading.value = false;
-};
-
-const saveProfile = async () => {
-    successMessage.value = "";
-    errorMessage.value = "";
-
-    if (!fullName.value.trim()) {
-        errorMessage.value =
-            "O nome completo é obrigatório.";
-        return;
-    }
-
-    savingProfile.value = true;
-
-    const {
-        data: { user },
-        error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-        errorMessage.value =
-            "Não foi possível identificar o utilizador.";
-        savingProfile.value = false;
-        return;
-    }
-
-    const { error } = await supabase
-        .from("profiles")
-        .update({
-            full_name: fullName.value.trim(),
-        })
-        .eq("id", user.id);
-
-    if (error) {
-        console.error("Profile update error:", error);
-
-        errorMessage.value =
-            "Não foi possível guardar o perfil.";
-        savingProfile.value = false;
-        return;
-    }
-
-    profile.value.full_name = fullName.value.trim();
-
-    successMessage.value =
-        "Perfil atualizado com sucesso.";
-
-    savingProfile.value = false;
-};
-
-const handleAvatarChange = (event) => {
-    successMessage.value = "";
-    errorMessage.value = "";
-
-    const file = event.target.files?.[0];
-
-    if (!file) {
-        return;
-    }
-
-    if (!allowedAvatarTypes.includes(file.type)) {
-        errorMessage.value =
-            "Formato inválido. Escolhe JPG, PNG ou WebP.";
-        event.target.value = "";
-        return;
-    }
-
-    if (file.size > MAX_AVATAR_SIZE) {
-        errorMessage.value =
-            "A fotografia não pode ultrapassar 2 MB.";
-        event.target.value = "";
-        return;
-    }
-
-    selectedAvatar.value = file;
-
-    const reader = new FileReader();
-
-    reader.onload = () => {
-        avatarPreview.value = reader.result;
-    };
-
-    reader.readAsDataURL(file);
-};
-
-const fileToBase64 = (file) => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-
-        reader.onload = () => {
-            const result = reader.result;
-
-            if (typeof result !== "string") {
-                reject(
-                    new Error(
-                        "Não foi possível processar a imagem."
-                    )
-                );
-                return;
-            }
-
-            const base64 = result.split(",")[1];
-
-            resolve(base64);
-        };
-
-        reader.onerror = () => {
-            reject(
-                new Error(
-                    "Não foi possível ler a imagem."
-                )
-            );
-        };
-
-        reader.readAsDataURL(file);
-    });
-};
-
-const uploadAvatar = async () => {
-    if (!selectedAvatar.value) {
-        return;
-    }
-
-    successMessage.value = "";
-    errorMessage.value = "";
-    uploadingAvatar.value = true;
-
-    try {
-        const base64 = await fileToBase64(
-            selectedAvatar.value
-        );
-
-        const { error } = await supabase.rpc(
-            "update_my_avatar",
-            {
-                p_avatar_base64: base64,
-                p_avatar_mime_type:
-                    selectedAvatar.value.type,
-                p_avatar_size:
-                    selectedAvatar.value.size,
-            }
-        );
-
-        if (error) {
-            console.error(
-                "Avatar upload error:",
-                error
-            );
-
-            throw new Error(
-                "Não foi possível guardar a fotografia."
-            );
-        }
-
-        window.dispatchEvent(new Event("profile-updated"));
-
-        selectedAvatar.value = null;
-
-        successMessage.value =
-            "Fotografia de perfil atualizada.";
-
-        await loadProfile();
-    } catch (error) {
-        errorMessage.value =
-            error.message ||
-            "Ocorreu um erro ao atualizar a fotografia.";
-    } finally {
-        uploadingAvatar.value = false;
-    }
-};
-
-const removeAvatar = async () => {
-    const confirmed = window.confirm(
-        "Tens a certeza que queres remover a fotografia de perfil?"
-    );
-
-    if (!confirmed) {
-        return;
-    }
-
-    successMessage.value = "";
-    errorMessage.value = "";
-    removingAvatar.value = true;
-
-    const { error } = await supabase.rpc(
-        "delete_my_avatar"
-    );
-
-    if (error) {
-        console.error(
-            "Avatar delete error:",
-            error
-        );
-
-        errorMessage.value =
-            "Não foi possível remover a fotografia.";
-
-        removingAvatar.value = false;
-        return;
-    }
-
-    window.dispatchEvent(new Event("profile-updated"));
-
-    selectedAvatar.value = null;
-    avatarPreview.value = "";
-
-    successMessage.value =
-        "Fotografia de perfil removida.";
-
-    removingAvatar.value = false;
-
-    await loadProfile();
-};
-
-const cancelAvatarChange = () => {
-    selectedAvatar.value = null;
-
-    if (
-        profile.value?.avatar_base64 &&
-        profile.value?.avatar_mime_type
-    ) {
-        avatarPreview.value =
-            `data:${profile.value.avatar_mime_type};base64,${profile.value.avatar_base64}`;
-    } else {
-        avatarPreview.value = "";
-    }
-};
-
-const formatDate = (date) => {
-    return new Intl.DateTimeFormat("pt-PT", {
-        dateStyle: "long",
-    }).format(new Date(date));
-};
+import { onMounted } from "vue";
+
+import { useProfileSettings } from "../composables/useProfileSettings";
+
+const {
+    profile,
+    fullName,
+    email,
+    avatarPreview,
+    selectedAvatar,
+
+    currentPassword,
+    newPassword,
+    confirmPassword,
+
+    loading,
+    savingProfile,
+    uploadingAvatar,
+    removingAvatar,
+    changingPassword,
+
+    successMessage,
+    errorMessage,
+
+    loadProfile,
+    saveProfile,
+    handleAvatarChange,
+    uploadAvatar,
+    removeAvatar,
+    cancelAvatarChange,
+    changePassword,
+    formatDate,
+} = useProfileSettings();
 
 onMounted(() => {
     loadProfile();
@@ -582,6 +300,7 @@ onMounted(() => {
             </section>
 
             <!-- Security -->
+            <!-- Security -->
             <section
                 class="bg-white rounded-xl border border-gray-200 p-6 md:p-8"
             >
@@ -593,22 +312,93 @@ onMounted(() => {
                     </h2>
 
                     <p class="text-gray-500 text-sm mt-1">
-                        A gestão da palavra-passe é feita pelo Supabase Auth.
+                        Altera a palavra-passe utilizada para aceder ao painel administrativo.
                     </p>
                 </div>
 
-                <div class="mt-6">
-                    <button
-                        type="button"
-                        disabled
-                        class="px-5 py-3 rounded-lg border border-gray-300 text-gray-500 cursor-not-allowed"
-                    >
-                        Alterar palavra-passe
-                    </button>
+                <div class="mt-6 max-w-2xl space-y-6">
 
-                    <p class="text-xs text-gray-400 mt-2">
-                        Vamos ativar esta opção na próxima etapa.
-                    </p>
+                    <!-- Current password -->
+                    <div>
+                        <label
+                            for="current-password"
+                            class="block text-sm font-semibold text-gray-700 mb-2"
+                        >
+                            Palavra-passe atual
+                        </label>
+
+                        <input
+                            id="current-password"
+                            v-model="currentPassword"
+                            type="password"
+                            autocomplete="current-password"
+                            class="w-full rounded-lg border-gray-300 focus:border-theme-primary focus:ring-theme-primary"
+                            placeholder="Palavra-passe atual"
+                            :disabled="changingPassword"
+                        />
+                    </div>
+
+                    <!-- New password -->
+                    <div>
+                        <label
+                            for="new-password"
+                            class="block text-sm font-semibold text-gray-700 mb-2"
+                        >
+                            Nova palavra-passe
+                        </label>
+
+                        <input
+                            id="new-password"
+                            v-model="newPassword"
+                            type="password"
+                            autocomplete="new-password"
+                            class="w-full rounded-lg border-gray-300 focus:border-theme-primary focus:ring-theme-primary"
+                            placeholder="Nova palavra-passe"
+                            :disabled="changingPassword"
+                        />
+
+                        <p class="text-xs text-gray-500 mt-2">
+                            A nova palavra-passe deve ter pelo menos 8 caracteres.
+                        </p>
+                    </div>
+
+                    <!-- Confirm new password -->
+                    <div>
+                        <label
+                            for="confirm-password"
+                            class="block text-sm font-semibold text-gray-700 mb-2"
+                        >
+                            Confirmar nova palavra-passe
+                        </label>
+
+                        <input
+                            id="confirm-password"
+                            v-model="confirmPassword"
+                            type="password"
+                            autocomplete="new-password"
+                            class="w-full rounded-lg border-gray-300 focus:border-theme-primary focus:ring-theme-primary"
+                            placeholder="Repetir nova palavra-passe"
+                            :disabled="changingPassword"
+                            @keyup.enter="changePassword"
+                        />
+                    </div>
+
+                    <!-- Change password -->
+                    <div>
+                        <button
+                            type="button"
+                            @click="changePassword"
+                            :disabled="changingPassword"
+                            class="px-5 py-3 rounded-lg bg-theme-primary text-white font-semibold hover:opacity-90 transition disabled:opacity-50"
+                        >
+                            {{
+                                changingPassword
+                                    ? "A alterar..."
+                                    : "Alterar palavra-passe"
+                            }}
+                        </button>
+                    </div>
+
                 </div>
             </section>
         </template>
