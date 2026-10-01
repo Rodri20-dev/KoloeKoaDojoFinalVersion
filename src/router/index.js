@@ -10,6 +10,7 @@ import VideosAdminView from "../views/VideosAdminView.vue";
 import ScheduleAdminView from "../views/ScheduleAdminView.vue";
 import MessagesAdminView from "../views/MessagesAdminView.vue";
 import SettingsAdminView from "../views/SettingsAdminView.vue";
+import AdminActivateView from "../views/AdminActivateView.vue";
 
 import AdminLayout from "../layouts/AdminLayout.vue";
 
@@ -64,6 +65,11 @@ const routes = [
                 path: "settings",
                 name: "admin-settings",
                 component: SettingsAdminView,
+            },
+            {
+                path: "/admin/activate",
+                name: "admin-activate",
+                component: AdminActivateView,
             },
         ],
     },

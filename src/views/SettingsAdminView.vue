@@ -1,6 +1,8 @@
 <script setup>
 import { onMounted } from "vue";
 
+import { useAdminUsers } from "../composables/useAdminUsers";
+
 import { useProfileSettings } from "../composables/useProfileSettings";
 
 const {
@@ -32,6 +34,15 @@ const {
     changePassword,
     formatDate,
 } = useProfileSettings();
+
+const {
+    fullName: newAdminFullName,
+    email: newAdminEmail,
+    loading: invitingAdmin,
+    successMessage: adminSuccessMessage,
+    errorMessage: adminErrorMessage,
+    submitInvite,
+} = useAdminUsers();
 
 onMounted(() => {
     loadProfile();
@@ -299,7 +310,108 @@ onMounted(() => {
                 </div>
             </section>
 
-            <!-- Security -->
+            <!-- Admin management -->
+            <section
+                class="bg-white rounded-xl border border-gray-200 p-6 md:p-8"
+            >
+                <div class="mb-6">
+                    <p
+                        class="text-theme-primary font-semibold uppercase tracking-wider text-sm"
+                    >
+                        Administração
+                    </p>
+
+                    <h2
+                        class="text-2xl font-theme-heading font-bold text-gray-900 mt-1"
+                    >
+                        Gestão de administradores
+                    </h2>
+
+                    <p class="text-gray-500 mt-2">
+                        Convida outros administradores para terem acesso ao painel.
+                    </p>
+                </div>
+
+                <!-- Messages -->
+                <div
+                    v-if="adminSuccessMessage"
+                    class="mb-6 bg-green-100 border border-green-300 text-green-800 rounded-lg px-4 py-3"
+                >
+                    {{ adminSuccessMessage }}
+                </div>
+
+                <div
+                    v-if="adminErrorMessage"
+                    class="mb-6 bg-red-100 border border-red-300 text-red-800 rounded-lg px-4 py-3"
+                >
+                    {{ adminErrorMessage }}
+                </div>
+
+                <form
+                    @submit.prevent="submitInvite"
+                    class="space-y-5"
+                >
+                    <div>
+                        <label
+                            for="new-admin-name"
+                            class="block text-sm font-medium text-gray-700 mb-2"
+                        >
+                            Nome completo
+                        </label>
+
+                        <input
+                            id="new-admin-name"
+                            v-model="newAdminFullName"
+                            type="text"
+                            autocomplete="name"
+                            placeholder="Nome do administrador"
+                            class="w-full rounded-lg border-gray-300 focus:border-theme-primary focus:ring-theme-primary"
+                        />
+                    </div>
+
+                    <div>
+                        <label
+                            for="new-admin-email"
+                            class="block text-sm font-medium text-gray-700 mb-2"
+                        >
+                            Email
+                        </label>
+
+                        <input
+                            id="new-admin-email"
+                            v-model="newAdminEmail"
+                            type="email"
+                            autocomplete="email"
+                            placeholder="admin@exemplo.pt"
+                            class="w-full rounded-lg border-gray-300 focus:border-theme-primary focus:ring-theme-primary"
+                        />
+                    </div>
+
+                    <div
+                        class="bg-gray-50 border border-gray-200 rounded-lg p-4"
+                    >
+                        <p class="text-sm text-gray-600">
+                            O utilizador receberá um email de convite para
+                            definir a sua palavra-passe e aceder ao painel
+                            administrativo.
+                        </p>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button
+                            type="submit"
+                            :disabled="invitingAdmin"
+                            class="bg-theme-primary text-white font-semibold rounded-lg px-5 py-3 transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {{
+                                invitingAdmin
+                                    ? "A enviar convite..."
+                                    : "Enviar convite"
+                            }}
+                        </button>
+                    </div>
+                </form>
+            </section>
             <!-- Security -->
             <section
                 class="bg-white rounded-xl border border-gray-200 p-6 md:p-8"
