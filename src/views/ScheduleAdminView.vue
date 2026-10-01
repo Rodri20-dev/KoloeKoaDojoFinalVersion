@@ -1,332 +1,34 @@
 <script setup>
-import { onMounted, ref } from "vue";
-import { supabase } from "../lib/supabase";
+import { useSchedule } from "../composables/useSchedule.js";
 
-const schedules = ref([]);
+const {
+    scheduleItems,
+    loading,
+    saving,
+    deletingId,
+    errorMessage,
+    successMessage,
 
-const dayOfWeek = ref(1);
-const startTime = ref("");
-const endTime = ref("");
-const title = ref("");
-const description = ref("");
-const active = ref(true);
+    showForm,
+    editingItem,
 
-const editingSchedule = ref(null);
+    dayOfWeek,
+    startTime,
+    endTime,
+    title,
+    description,
+    active,
 
-const loading = ref(true);
-const saving = ref(false);
-const deletingId = ref(null);
+    daysOfWeek,
 
-const errorMessage = ref("");
-const successMessage = ref("");
-
-const daysOfWeek = [
-    { value: 1, label: "Segunda-feira" },
-    { value: 2, label: "Terça-feira" },
-    { value: 3, label: "Quarta-feira" },
-    { value: 4, label: "Quinta-feira" },
-    { value: 5, label: "Sexta-feira" },
-    { value: 6, label: "Sábado" },
-    { value: 7, label: "Domingo" },
-];
-
-const getDayName = (day) => {
-    return (
-        daysOfWeek.find(
-            (item) => item.value === day
-        )?.label || "Dia desconhecido"
-    );
-};
-
-const loadSchedules = async () => {
-    loading.value = true;
-    errorMessage.value = "";
-
-    const { data, error } = await supabase
-        .from("schedule")
-        .select("*")
-        .order("day_of_week", { ascending: true })
-        .order("start_time", { ascending: true });
-
-    if (error) {
-        console.error("Schedule load error:", error);
-
-        errorMessage.value =
-            "Não foi possível carregar os horários.";
-
-        loading.value = false;
-        return;
-    }
-
-    schedules.value = data;
-    loading.value = false;
-};
-
-const resetForm = () => {
-    dayOfWeek.value = 1;
-    startTime.value = "";
-    endTime.value = "";
-    title.value = "";
-    description.value = "";
-    active.value = true;
-};
-
-const addSchedule = async () => {
-    errorMessage.value = "";
-    successMessage.value = "";
-
-    if (!startTime.value || !endTime.value) {
-        errorMessage.value =
-            "A hora de início e de fim são obrigatórias.";
-
-        return;
-    }
-
-    if (startTime.value >= endTime.value) {
-        errorMessage.value =
-            "A hora de fim deve ser posterior à hora de início.";
-
-        return;
-    }
-
-    saving.value = true;
-
-    try {
-        const { data, error } = await supabase
-            .from("schedule")
-            .insert({
-                day_of_week: dayOfWeek.value,
-                start_time: startTime.value,
-                end_time: endTime.value,
-                title: title.value.trim() || null,
-                description:
-                    description.value.trim() || null,
-                active: active.value,
-            })
-            .select()
-            .single();
-
-        if (error) {
-            console.error(
-                "Schedule insert error:",
-                error
-            );
-
-            throw new Error(
-                "Não foi possível adicionar o horário."
-            );
-        }
-
-        schedules.value = [
-            ...schedules.value,
-            data,
-        ].sort((a, b) => {
-            if (a.day_of_week !== b.day_of_week) {
-                return a.day_of_week - b.day_of_week;
-            }
-
-            return a.start_time.localeCompare(
-                b.start_time
-            );
-        });
-
-        resetForm();
-
-        successMessage.value =
-            "Horário adicionado com sucesso.";
-    } catch (error) {
-        errorMessage.value =
-            error.message ||
-            "Ocorreu um erro ao adicionar o horário.";
-    } finally {
-        saving.value = false;
-    }
-};
-
-const startEditing = (schedule) => {
-    editingSchedule.value = {
-        id: schedule.id,
-        day_of_week: schedule.day_of_week,
-        start_time: schedule.start_time.slice(0, 5),
-        end_time: schedule.end_time.slice(0, 5),
-        title: schedule.title || "",
-        description: schedule.description || "",
-        active: schedule.active,
-    };
-
-    errorMessage.value = "";
-    successMessage.value = "";
-};
-
-const cancelEditing = () => {
-    editingSchedule.value = null;
-    errorMessage.value = "";
-};
-
-const updateSchedule = async () => {
-    if (!editingSchedule.value) {
-        return;
-    }
-
-    errorMessage.value = "";
-    successMessage.value = "";
-
-    if (
-        !editingSchedule.value.start_time ||
-        !editingSchedule.value.end_time
-    ) {
-        errorMessage.value =
-            "A hora de início e de fim são obrigatórias.";
-
-        return;
-    }
-
-    if (
-        editingSchedule.value.start_time >=
-        editingSchedule.value.end_time
-    ) {
-        errorMessage.value =
-            "A hora de fim deve ser posterior à hora de início.";
-
-        return;
-    }
-
-    saving.value = true;
-
-    try {
-        const { data, error } = await supabase
-            .from("schedule")
-            .update({
-                day_of_week:
-                    editingSchedule.value.day_of_week,
-
-                start_time:
-                    editingSchedule.value.start_time,
-
-                end_time:
-                    editingSchedule.value.end_time,
-
-                title:
-                    editingSchedule.value.title.trim() ||
-                    null,
-
-                description:
-                    editingSchedule.value.description
-                        .trim() || null,
-
-                active:
-                    editingSchedule.value.active,
-
-                updated_at: new Date().toISOString(),
-            })
-            .eq(
-                "id",
-                editingSchedule.value.id
-            )
-            .select()
-            .single();
-
-        if (error) {
-            console.error(
-                "Schedule update error:",
-                error
-            );
-
-            throw new Error(
-                "Não foi possível atualizar o horário."
-            );
-        }
-
-        schedules.value = schedules.value
-            .map((schedule) =>
-                schedule.id === data.id
-                    ? data
-                    : schedule
-            )
-            .sort((a, b) => {
-                if (
-                    a.day_of_week !==
-                    b.day_of_week
-                ) {
-                    return (
-                        a.day_of_week -
-                        b.day_of_week
-                    );
-                }
-
-                return a.start_time.localeCompare(
-                    b.start_time
-                );
-            });
-
-        editingSchedule.value = null;
-
-        successMessage.value =
-            "Horário atualizado com sucesso.";
-    } catch (error) {
-        errorMessage.value =
-            error.message ||
-            "Ocorreu um erro ao atualizar o horário.";
-    } finally {
-        saving.value = false;
-    }
-};
-
-const deleteSchedule = async (schedule) => {
-    const confirmed = window.confirm(
-        `Tens a certeza que queres eliminar o horário "${getDayName(
-            schedule.day_of_week
-        )} ${schedule.start_time.slice(
-            0,
-            5
-        )}"?`
-    );
-
-    if (!confirmed) {
-        return;
-    }
-
-    errorMessage.value = "";
-    successMessage.value = "";
-    deletingId.value = schedule.id;
-
-    try {
-        const { error } = await supabase
-            .from("schedule")
-            .delete()
-            .eq("id", schedule.id);
-
-        if (error) {
-            console.error(
-                "Schedule delete error:",
-                error
-            );
-
-            throw new Error(
-                "Não foi possível eliminar o horário."
-            );
-        }
-
-        schedules.value =
-            schedules.value.filter(
-                (item) =>
-                    item.id !== schedule.id
-            );
-
-        successMessage.value =
-            "Horário eliminado com sucesso.";
-    } catch (error) {
-        errorMessage.value =
-            error.message ||
-            "Ocorreu um erro ao eliminar o horário.";
-    } finally {
-        deletingId.value = null;
-    }
-};
-
-onMounted(() => {
-    loadSchedules();
-});
+    openCreateForm,
+    closeForm,
+    startEditing,
+    saveSchedule,
+    removeSchedule,
+    toggleActive,
+    getDayName,
+} = useSchedule();
 </script>
 
 <template>
@@ -377,7 +79,7 @@ onMounted(() => {
             </h2>
 
             <form
-                @submit.prevent="addSchedule"
+                @submit.prevent="saveSchedule"
                 class="space-y-5"
             >
                 <!-- Dia -->
@@ -510,7 +212,7 @@ onMounted(() => {
 
         <!-- Editar -->
         <div
-            v-if="editingSchedule"
+            v-if="editingItem"
             class="bg-white rounded-xl shadow-sm p-6 mb-8"
         >
             <div
@@ -532,7 +234,7 @@ onMounted(() => {
 
                 <button
                     type="button"
-                    @click="cancelEditing"
+                    @click="closeForm"
                     :disabled="saving"
                     class="text-gray-500 hover:text-black text-xl"
                 >
@@ -541,7 +243,7 @@ onMounted(() => {
             </div>
 
             <form
-                @submit.prevent="updateSchedule"
+                @submit.prevent="saveSchedule"
                 class="space-y-5"
             >
                 <!-- Dia -->
@@ -556,7 +258,7 @@ onMounted(() => {
                     <select
                         id="edit-schedule-day"
                         v-model.number="
-                            editingSchedule.day_of_week
+                            dayOfWeek
                         "
                         class="w-full rounded-lg border-gray-300 focus:border-theme-primary focus:ring-theme-primary"
                     >
@@ -585,7 +287,7 @@ onMounted(() => {
                         <input
                             id="edit-schedule-start"
                             v-model="
-                                editingSchedule.start_time
+                                startTime
                             "
                             type="time"
                             class="w-full rounded-lg border-gray-300 focus:border-theme-primary focus:ring-theme-primary"
@@ -603,7 +305,7 @@ onMounted(() => {
                         <input
                             id="edit-schedule-end"
                             v-model="
-                                editingSchedule.end_time
+                                endTime
                             "
                             type="time"
                             class="w-full rounded-lg border-gray-300 focus:border-theme-primary focus:ring-theme-primary"
@@ -623,7 +325,7 @@ onMounted(() => {
                     <input
                         id="edit-schedule-title"
                         v-model="
-                            editingSchedule.title
+                            title
                         "
                         type="text"
                         class="w-full rounded-lg border-gray-300 focus:border-theme-primary focus:ring-theme-primary"
@@ -642,7 +344,7 @@ onMounted(() => {
                     <textarea
                         id="edit-schedule-description"
                         v-model="
-                            editingSchedule.description
+                            description
                         "
                         rows="3"
                         class="w-full rounded-lg border-gray-300 focus:border-theme-primary focus:ring-theme-primary"
@@ -655,7 +357,7 @@ onMounted(() => {
                 >
                     <input
                         v-model="
-                            editingSchedule.active
+                            active
                         "
                         type="checkbox"
                         class="rounded border-gray-300 text-theme-primary focus:ring-theme-primary"
@@ -685,7 +387,7 @@ onMounted(() => {
 
                     <button
                         type="button"
-                        @click="cancelEditing"
+                        @click="closeForm"
                         :disabled="saving"
                         class="px-5 py-3 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition disabled:opacity-50"
                     >
@@ -710,7 +412,7 @@ onMounted(() => {
                     <p
                         class="text-sm text-gray-500 mt-1"
                     >
-                        {{ schedules.length }} horário(s)
+                        {{ scheduleItems.length }} horário(s)
                     </p>
                 </div>
             </div>
@@ -725,7 +427,7 @@ onMounted(() => {
 
             <!-- Vazio -->
             <div
-                v-else-if="schedules.length === 0"
+                v-else-if="scheduleItems.length === 0"
                 class="text-center py-12 text-gray-500"
             >
                 Ainda não existem horários.
@@ -737,7 +439,7 @@ onMounted(() => {
                 class="space-y-4"
             >
                 <article
-                    v-for="schedule in schedules"
+                    v-for="schedule in scheduleItems"
                     :key="schedule.id"
                     class="border border-gray-200 rounded-xl p-5"
                 >
@@ -825,7 +527,7 @@ onMounted(() => {
                             <button
                                 type="button"
                                 @click="
-                                    deleteSchedule(
+                                    removeSchedule(
                                         schedule
                                     )
                                 "

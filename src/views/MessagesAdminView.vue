@@ -1,76 +1,55 @@
 <script setup>
-import { computed, onMounted, ref } from "vue";
-import { supabase } from "../lib/supabase";
+import { ref } from "vue";
+import { useMessages } from "../composables/useMessages";
+import { updateMessageStatus } from "../services/messageService";
 
-const messages = ref([]);
-const loading = ref(true);
-const errorMessage = ref("");
+const {
+    messages,
+    loading,
+    errorMessage,
+    successMessage,
+    deletingId,
+    newMessagesCount,
+    markAsRead,
+    markAsReplied,
+    removeMessage,
+    formatDate,
+} = useMessages();
+
+// Estado para o Modal e seleção de mensagem
 const selectedMessage = ref(null);
 const updatingId = ref(null);
-const deletingId = ref(null);
 
+// Opções de Estado para a dropdown
 const statusOptions = [
     { value: "new", label: "Nova" },
     { value: "read", label: "Lida" },
     { value: "replied", label: "Respondida" },
 ];
 
-const loadMessages = async () => {
-    loading.value = true;
-    errorMessage.value = "";
-
-    const { data, error } = await supabase
-        .from("contact_messages")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-    if (error) {
-        console.error("Messages load error:", error);
-        errorMessage.value = "Não foi possível carregar as mensagens.";
-        loading.value = false;
-        return;
-    }
-
-    messages.value = data || [];
-    loading.value = false;
-};
-
-const formatDate = (date) => {
-    return new Intl.DateTimeFormat("pt-PT", {
-        dateStyle: "short",
-        timeStyle: "short",
-    }).format(new Date(date));
-};
-
 const getStatusLabel = (status) => {
-    const option = statusOptions.find(
-        (item) => item.value === status
-    );
-
-    return option?.label || status;
+    const found = statusOptions.find((opt) => opt.value === status);
+    return found ? found.label : status;
 };
 
 const getStatusClass = (status) => {
-    if (status === "new") {
-        return "bg-yellow-100 text-yellow-800";
+    switch (status) {
+        case "new":
+            return "bg-yellow-100 text-yellow-800";
+        case "read":
+            return "bg-blue-100 text-blue-800";
+        case "replied":
+            return "bg-green-100 text-green-800";
+        default:
+            return "bg-gray-100 text-gray-800";
     }
-
-    if (status === "read") {
-        return "bg-blue-100 text-blue-800";
-    }
-
-    if (status === "replied") {
-        return "bg-green-100 text-green-800";
-    }
-
-    return "bg-gray-100 text-gray-800";
 };
 
-const openMessage = async (message) => {
+// Abrir e fechar Modal
+const openMessage = (message) => {
     selectedMessage.value = message;
-
     if (message.status === "new") {
-        await updateStatus(message.id, "read");
+        markAsRead(message);
     }
 };
 
@@ -78,84 +57,32 @@ const closeMessage = () => {
     selectedMessage.value = null;
 };
 
+// Atualizar Estado da Mensagem
 const updateStatus = async (id, status) => {
     updatingId.value = id;
-    errorMessage.value = "";
-
-    const { data, error } = await supabase
-        .from("contact_messages")
-        .update({
-            status,
-            updated_at: new Date().toISOString(),
-        })
-        .eq("id", id)
-        .select()
-        .single();
-
-    if (error) {
-        console.error("Message status update error:", error);
-        errorMessage.value =
-            "Não foi possível atualizar o estado da mensagem.";
+    try {
+        const updated = await updateMessageStatus(id, status);
+        const index = messages.value.findIndex((m) => m.id === id);
+        if (index !== -1) {
+            messages.value[index] = updated;
+        }
+        if (selectedMessage.value && selectedMessage.value.id === id) {
+            selectedMessage.value = updated;
+        }
+    } catch (err) {
+        console.error("Erro ao atualizar estado:", err);
+    } finally {
         updatingId.value = null;
-        return;
     }
-
-    messages.value = messages.value.map((message) =>
-        message.id === id ? data : message
-    );
-
-    if (selectedMessage.value?.id === id) {
-        selectedMessage.value = data;
-    }
-
-    updatingId.value = null;
 };
 
+// Eliminar Mensagem
 const deleteMessage = async (message) => {
-    const confirmed = window.confirm(
-        `Tens a certeza que queres eliminar a mensagem de "${message.name}"?`
-    );
-
-    if (!confirmed) {
-        return;
-    }
-
-    deletingId.value = message.id;
-    errorMessage.value = "";
-
-    const { error } = await supabase
-        .from("contact_messages")
-        .delete()
-        .eq("id", message.id);
-
-    if (error) {
-        console.error("Message delete error:", error);
-        errorMessage.value =
-            "Não foi possível eliminar a mensagem.";
-        deletingId.value = null;
-        return;
-    }
-
-    messages.value = messages.value.filter(
-        (item) => item.id !== message.id
-    );
-
+    await removeMessage(message);
     if (selectedMessage.value?.id === message.id) {
-        selectedMessage.value = null;
+        closeMessage();
     }
-
-    deletingId.value = null;
 };
-
-const newMessagesCount = computed(() => {
-    return messages.value.filter(
-        (message) => message.status === "new"
-    ).length;
-});
-
-onMounted(() => {
-    loadMessages();
-});
 </script>
 
 <template>
@@ -187,6 +114,14 @@ onMounted(() => {
                     {{ newMessagesCount }}
                 </span>
             </div>
+        </div>
+
+        <!-- Success Message -->
+        <div
+            v-if="successMessage"
+            class="bg-green-100 border border-green-300 text-green-800 rounded-lg px-4 py-3"
+        >
+            {{ successMessage }}
         </div>
 
         <!-- Error -->
@@ -229,7 +164,9 @@ onMounted(() => {
         >
             <div class="overflow-x-auto">
                 <table class="w-full">
-                    <thead class="bg-gray-50 border-b border-gray-200">
+                    <thead
+                        class="bg-gray-50 border-b border-gray-200"
+                    >
                         <tr>
                             <th
                                 class="text-left px-6 py-4 text-sm font-semibold text-gray-700"
@@ -270,7 +207,9 @@ onMounted(() => {
                             class="hover:bg-gray-50 transition"
                         >
                             <td class="px-6 py-4">
-                                <p class="font-semibold text-gray-900">
+                                <p
+                                    class="font-semibold text-gray-900"
+                                >
                                     {{ message.name }}
                                 </p>
 
@@ -327,12 +266,8 @@ onMounted(() => {
 
                                     <button
                                         type="button"
-                                        :disabled="
-                                            deletingId === message.id
-                                        "
-                                        @click="
-                                            deleteMessage(message)
-                                        "
+                                        :disabled="deletingId === message.id"
+                                        @click="deleteMessage(message)"
                                         class="px-3 py-2 rounded-lg bg-red-600 text-white text-sm hover:bg-red-700 transition disabled:opacity-50"
                                     >
                                         {{
@@ -386,24 +321,18 @@ onMounted(() => {
                 <!-- Modal content -->
                 <div class="p-6 space-y-6">
                     <div>
-                        <p
-                            class="text-sm font-semibold text-gray-500"
-                        >
+                        <p class="text-sm font-semibold text-gray-500">
                             Nome
                         </p>
-
                         <p class="text-gray-900 mt-1">
                             {{ selectedMessage.name }}
                         </p>
                     </div>
 
                     <div>
-                        <p
-                            class="text-sm font-semibold text-gray-500"
-                        >
+                        <p class="text-sm font-semibold text-gray-500">
                             Email
                         </p>
-
                         <a
                             :href="`mailto:${selectedMessage.email}`"
                             class="text-theme-primary hover:underline mt-1 inline-block"
@@ -413,35 +342,21 @@ onMounted(() => {
                     </div>
 
                     <div>
-                        <p
-                            class="text-sm font-semibold text-gray-500"
-                        >
+                        <p class="text-sm font-semibold text-gray-500">
                             Estado
                         </p>
-
                         <span
                             class="inline-block mt-2 px-3 py-1 rounded-full text-sm font-semibold"
-                            :class="
-                                getStatusClass(
-                                    selectedMessage.status
-                                )
-                            "
+                            :class="getStatusClass(selectedMessage.status)"
                         >
-                            {{
-                                getStatusLabel(
-                                    selectedMessage.status
-                                )
-                            }}
+                            {{ getStatusLabel(selectedMessage.status) }}
                         </span>
                     </div>
 
                     <div>
-                        <p
-                            class="text-sm font-semibold text-gray-500 mb-2"
-                        >
+                        <p class="text-sm font-semibold text-gray-500 mb-2">
                             Mensagem
                         </p>
-
                         <div
                             class="bg-gray-50 rounded-xl p-4 text-gray-800 whitespace-pre-wrap"
                         >
@@ -450,17 +365,10 @@ onMounted(() => {
                     </div>
 
                     <!-- Status buttons -->
-                    <div
-                        class="flex flex-wrap gap-3 pt-2"
-                    >
+                    <div class="flex flex-wrap gap-3 pt-2">
                         <button
                             type="button"
-                            @click="
-                                updateStatus(
-                                    selectedMessage.id,
-                                    'new'
-                                )
-                            "
+                            @click="updateStatus(selectedMessage.id, 'new')"
                             class="px-4 py-2 rounded-lg bg-yellow-500 text-white hover:opacity-90 transition"
                         >
                             Marcar como nova
@@ -468,12 +376,7 @@ onMounted(() => {
 
                         <button
                             type="button"
-                            @click="
-                                updateStatus(
-                                    selectedMessage.id,
-                                    'read'
-                                )
-                            "
+                            @click="updateStatus(selectedMessage.id, 'read')"
                             class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:opacity-90 transition"
                         >
                             Marcar como lida
@@ -481,12 +384,7 @@ onMounted(() => {
 
                         <button
                             type="button"
-                            @click="
-                                updateStatus(
-                                    selectedMessage.id,
-                                    'replied'
-                                )
-                            "
+                            @click="updateStatus(selectedMessage.id, 'replied')"
                             class="px-4 py-2 rounded-lg bg-green-600 text-white hover:opacity-90 transition"
                         >
                             Marcar como respondida
