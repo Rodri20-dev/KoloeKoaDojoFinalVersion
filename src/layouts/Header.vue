@@ -98,6 +98,7 @@ const closeMobileNav = () => {
                                 Linhagem
                             </a>
                         </li>
+                        
                         <li class="uppercase hover:text-theme-secondary transition duration-200">
                             <a href="#masters" v-smooth-scroll>
                                 Mestres
@@ -274,15 +275,7 @@ const closeMobileNav = () => {
                                 Linhagem
                             </a>
                         </li>
-                        <li class="mobile-nav-item">
-                            <a
-                                href="#lineage"
-                                v-smooth-scroll
-                                @click="closeMobileNav"
-                            >
-                                Linhagem
-                            </a>
-                        </li>
+
                         <li class="mobile-nav-item">
                             <a
                                 href="#masters"
