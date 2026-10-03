@@ -5,6 +5,7 @@ import KenpoSection from "../sections/KenpoSection.vue";
 import PhilosophySection from "../sections/PhilosophySection.vue";
 import KenpoPathSection from "../sections/KenpoPathSection.vue";
 import LineageSection from "../sections/LineageSection.vue";
+import MastersSection from "../sections/MastersSection.vue";
 import OhanaSection from "../sections/OhanaSection.vue";
 import GallerySection from "../sections/GallerySection.vue";
 import VideosSection from "../sections/VideosSection.vue";
@@ -19,6 +20,7 @@ import ContactSection from "../sections/ContactSection.vue";
     <PhilosophySection />
     <KenpoPathSection />
     <LineageSection />
+    <MastersSection />
     <OhanaSection />
     <GallerySection />
     <VideosSection />
