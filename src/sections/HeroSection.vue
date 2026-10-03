@@ -1,5 +1,6 @@
 <script setup>
 import upkkLogo from "../assets/images/logo-upkk.jpeg";
+import chowHoonLogo from "../assets/images/LogoChowHoon.jpeg";
 </script>
 
 <template>
@@ -48,17 +49,19 @@ import upkkLogo from "../assets/images/logo-upkk.jpeg";
                         longevidade saudável. Tens tantos motivos... MOTIVA-TE!
                     </p>
 
-                    <!-- UPKK Logo -->
-                    <div
-                        class="mt-8 flex justify-center lg:justify-start"
-                    >
+                    <!-- Logos UPKK & Chow Hoon -->
+                    <div class="mt-10 flex flex-row items-center justify-center lg:justify-start gap-8 md:gap-12 w-full">
                         <img
                             :src="upkkLogo"
-                            class="w-80 md:w-[28rem] h-auto object-contain"
+                            class="w-64 md:w-80 lg:w-[22rem] h-auto object-contain"
                             alt="União Portuguesa de Karaté Kenpo"
                         />
+                        <img
+                            :src="chowHoonLogo"
+                            class="w-64 md:w-80 lg:w-[22rem] h-auto object-contain ml-12 md:ml-20"
+                            alt="Chow-Hoon Ohana"
+                        />
                     </div>
-
                 </div>
 
                 <!-- Kolo'e Koa Logo -->
