@@ -36,7 +36,8 @@ import upkkLogo from "../assets/images/logo-upkk.jpeg";
                         defesa pessoal de linhagem Havaiana, pertencente à
                         UPKK - União Portuguesa de Karaté KENPO, fundada há
                         mais de 3 décadas pelo PROFESSOR PEDRO PORÉM,
-                        Diretor Técnico da Arte!
+                        Diretor Técnico da Arte, graduado em 7º DAN da arte de KENPO Chow Hoon Goshin Jitsu, 
+                        e 6º DAN de Kenpo Kosho Ryu Kenpo.
                     </p>
                     
                     <br>
