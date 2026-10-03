@@ -4,7 +4,7 @@
 <template>
     <!-- Masters Section Start -->
     <section
-        id="mestres"
+        id="masters"
         class="relative min-h-[800px] flex items-center overflow-hidden"
     >
         <!-- Background Image -->
